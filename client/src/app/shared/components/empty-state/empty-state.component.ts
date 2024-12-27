@@ -16,15 +16,15 @@ import { BusyService } from '../../../core/services/busy.service';
   styleUrl: './empty-state.component.scss'
 })
 export class EmptyStateComponent {
-  // busyService = inject(BusyService);
-  // message = input.required<string>();
-  // icon = input.required<string>();
-  // actionText = input.required<string>();
-  // action = output<void>();
+  busyService = inject(BusyService);
+  message = input.required<string>();
+  icon = input.required<string>();
+  actionText = input.required<string>();
+  action = output<void>();
 
-  // onAction() {
-  //   this.action.emit();
-  // }
+  onAction() {
+    this.action.emit();
+  }
 
 
 }
