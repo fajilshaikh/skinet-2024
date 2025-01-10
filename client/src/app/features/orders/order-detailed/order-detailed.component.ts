@@ -7,6 +7,8 @@ import { AddressPipe } from "../../../shared/pipes/address.pipe";
 import { PaymentCardPipe } from "../../../shared/pipes/payment-card.pipe";
 import { MatCard } from '@angular/material/card';
 import { MatButton } from '@angular/material/button';
+import { AccountService } from '../../../core/services/account.service';
+import { AdminService } from '../../../core/services/admin.service';
 
 @Component({
   selector: 'app-order-detailed',
@@ -24,27 +26,34 @@ import { MatButton } from '@angular/material/button';
   styleUrl: './order-detailed.component.scss'
 })
 export class OrderDetailedComponent implements OnInit {
-  buttonText: any;
-  onReturnClick() {
-    // this.accountService.isAdmin()
-    //   ? this.router.navigateByUrl('/admin')
-    //   : 
-      this.router.navigateByUrl('/orders')
-  }
-
+  private accountService = inject(AccountService);
   private orderService = inject(OrderService);
   private activatedRoute = inject(ActivatedRoute);
+  private adminService = inject(AdminService);
   private router = inject(Router);
+  buttonText = this.accountService.isAdmin() ? 'Return to admin' : 'Return to orders' ;
   order?: Order;
 
   ngOnInit(): void {
     this.loadOrder();
   }
 
+  onReturnClick() {
+    this.accountService.isAdmin()
+      ? this.router.navigateByUrl('/admin')
+      :
+      this.router.navigateByUrl('/orders')
+  }
+
   loadOrder() {
     const id = this.activatedRoute.snapshot.paramMap.get('id');
     if (!id) return;
-    this.orderService.getOrderDetailed(+id).subscribe({
+
+    const loadOrderData = this.accountService.isAdmin()
+    ? this.adminService.getOrder(+id)
+    : this.orderService.getOrderDetailed(+id);
+
+    loadOrderData.subscribe({
       next: order => this.order = order
     })
   }

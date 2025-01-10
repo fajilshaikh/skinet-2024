@@ -1,17 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using API.DTOs;
 using API.Extensions;
-using Azure.Core;
 using Core.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Update.Internal;
 
 namespace API.Controllers
 {
@@ -64,7 +57,8 @@ namespace API.Controllers
                 user.FirstName,
                 user.LastName,
                 user.Email,
-                Address = user.Address.ToDto()
+                Address = user.Address.ToDto(),
+                Roles = User.FindFirstValue(ClaimTypes.Role)
             });
         }
 
