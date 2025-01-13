@@ -6,6 +6,8 @@ module.exports = {
   theme: {
     extend: {},
   },
-  plugins: [],
+  plugins: [
+    require('flowbite-typography')
+  ],
   important: true
 }

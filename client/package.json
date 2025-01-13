@@ -22,6 +22,7 @@
     "@angular/router": "^18.2.0",
     "@microsoft/signalr": "^8.0.7",
     "@stripe/stripe-js": "^5.3.0",
+    "flowbite-typography": "^1.0.5",
     "nanoid": "^5.0.9",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

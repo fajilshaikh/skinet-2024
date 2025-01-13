@@ -8,6 +8,7 @@ import { ServerErrorComponent } from './shared/components/server-error/server-er
 import { CartComponent } from './features/cart/cart.component';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { AboutComponent } from './features/about/about.component';
 
 export const routes: Routes = [
 
@@ -18,6 +19,7 @@ export const routes: Routes = [
     { path: 'checkout', loadChildren: () => import('./features/checkout/routes').then(r => r.checkRoutes) },
     { path: 'orders', loadChildren: () => import('./features/orders/routes').then(r => r.orderRoutes) },
     { path: 'account', loadChildren: () => import('./features/account/routes').then(r => r.accountRoutes) },
+    { path: 'about', component: AboutComponent },
     { path: 'test-error', component: TestErrorComponent },
     { path: 'not-found', component: NotFoundComponent },
     { path: 'server-error', component: ServerErrorComponent },
