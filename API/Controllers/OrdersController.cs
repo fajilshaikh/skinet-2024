@@ -1,6 +1,7 @@
 
 using API.DTOs;
 using API.Extensions;
+using API.RequestHelpers;
 using Core.Entities;
 using Core.Entities.OrderAggregate;
 using Core.Interfaces;
@@ -14,6 +15,7 @@ namespace API.Controllers
     public class OrdersController(ICartService cartService, IUnitOfWork unit) : BaseApiController
     {
 
+        [InvalidateCache("api/products|")]
         [HttpPost]
         public async Task<ActionResult<Order>> CreateOrder(CreateOrderDto orderDto)
         {
@@ -31,6 +33,13 @@ namespace API.Controllers
 
                 if (productItem == null) return BadRequest("Problem with the order");
 
+                if (productItem.QuantityInStock < item.Quantity)
+                {
+                    return BadRequest($"Not enough stock for product {item.ProductName}. Available stock: {productItem.QuantityInStock}");
+                }
+                // Reduce the stock by the ordered quantity
+                productItem.QuantityInStock -= item.Quantity;
+
                 var itemOrdered = new ProductItemOrdered
                 {
                     ProductId = item.ProductId,
@@ -45,6 +54,7 @@ namespace API.Controllers
                     Quantity = item.Quantity
                 };
                 items.Add(orderItem);
+                unit.Repository<Product>().Update(productItem);
             }
 
             var deliveryMethod = await unit.Repository<DeliveryMethod>().GetByIdAsync(orderDto.DeliveryMethodId);
@@ -64,7 +74,29 @@ namespace API.Controllers
                 BuyerEmail = email
             };
 
-            unit.Repository<Order>().Add(order);
+            // Check if there is an existing order for the same payment intent
+            var spec = new OrderSpecification(cart.PaymentIntentId, true);
+            var existingOrder = await unit.Repository<Order>().GetEntityWithSpec(spec);
+
+            if (existingOrder != null)
+            {
+                // Merge fields to preserve the existing order while updating necessary details
+                existingOrder.OrderItems = order.OrderItems;
+                existingOrder.DeliveryMethod = order.DeliveryMethod;
+                existingOrder.ShippingAddress = order.ShippingAddress;
+                existingOrder.Subtotal = order.Subtotal;
+                existingOrder.Discount = order.Discount;
+                existingOrder.PaymentSummary = order.PaymentSummary;
+                existingOrder.BuyerEmail = order.BuyerEmail;
+
+                // Update existing order
+                unit.Repository<Order>().Update(existingOrder);
+                order = existingOrder; // Set the return value to the updated order
+            }
+            else
+            {
+                unit.Repository<Order>().Add(order); // Add new order
+            }
 
             if (await unit.Complete())
             {

@@ -14,7 +14,7 @@ using Stripe;
 namespace API.Controllers
 {
     public class PaymentsController(IPaymentService paymentService,
-    IUnitOfWork unit, ILogger<PaymentsController> logger,IConfiguration config, IHubContext<NotificationHub> hubContext) : BaseApiController
+    IUnitOfWork unit, ILogger<PaymentsController> logger, IConfiguration config, IHubContext<NotificationHub> hubContext) : BaseApiController
     {
         private readonly string _whSecret = config["StripeSettings:WhSecret"]!;
         [Authorize]
@@ -47,7 +47,9 @@ namespace API.Controllers
                     return BadRequest("Invalid event data");
                 }
 
-                await HandlePaymentIntentSucceeded(intent);
+                if (intent.Status == "succeeded") await HandlePaymentIntentSucceeded(intent);
+                else await HandlePaymentIntentFailed(intent);
+
 
                 return Ok();
             }
@@ -65,15 +67,13 @@ namespace API.Controllers
 
         private async Task HandlePaymentIntentSucceeded(PaymentIntent intent)
         {
-            if (intent.Status == "succeeded")
-            {
+           
                 var spec = new OrderSpecification(intent.Id, true);
 
                 var order = await unit.Repository<Order>().GetEntityWithSpec(spec)
                 ?? throw new Exception("Order not found");
 
                 var orderTotalInCents = (long)Math.Round(order.GetTotal() * 100, MidpointRounding.AwayFromZero);
-
 
                 if (orderTotalInCents != intent.Amount)
                 {
@@ -87,14 +87,35 @@ namespace API.Controllers
                 await unit.Complete();
 
                 // TODO : SignalR
-
                 var connectionId = NotificationHub.GeConnectionIdByEmail(order.BuyerEmail);
-                if(!string.IsNullOrEmpty(connectionId)) 
+                if (!string.IsNullOrEmpty(connectionId))
                 {
                     await hubContext.Clients.Client(connectionId)
-                    .SendAsync("OrderCompleteNotification" , order.ToDto());
+                    .SendAsync("OrderCompleteNotification", order.ToDto());
                 }
+            
+        }
+        private async Task HandlePaymentIntentFailed(PaymentIntent intent)
+        {
+            // create spec for order with order items based on intent id
+            var spec = new OrderSpecification(intent.Id, true);
+
+            var order = await unit.Repository<Order>().GetEntityWithSpec(spec)
+                ?? throw new Exception("Order not found");
+
+            // update quantities for the products in stock based on the failed order
+            foreach (var item in order.OrderItems)
+            {
+                var productItem = await unit.Repository<Core.Entities.Product>()
+                    .GetByIdAsync(item.ItemOrdered.ProductId)
+                        ?? throw new Exception("Problem updating order stock");
+
+                productItem.QuantityInStock += item.Quantity;
             }
+
+            order.Status = OrderStatus.PaymentFailed;
+
+            await unit.Complete();
         }
 
         private Event ConstructStripeEvent(string json)

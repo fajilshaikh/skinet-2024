@@ -1,8 +1,10 @@
-﻿using API.RequestHelpers;
+﻿using System.Security.Cryptography.X509Certificates;
+using API.RequestHelpers;
 using Core.Entities;
 using Core.Interfaces;
 using Core.Specifications;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -43,6 +45,27 @@ public class ProductsController(IUnitOfWork unit) : BaseApiController
         }
 
         return BadRequest("Problem creating product");
+    }
+
+    [InvalidateCache("api/products|")]
+    [Authorize(Roles = "Admin")]
+    [HttpPut("update-stock/{productId}")]
+    public async Task<ActionResult> UpdateStock(int productId, [FromBody] int newQuantity)
+    {
+        var productItem = await unit.Repository<Product>().GetByIdAsync(productId);
+        if (productItem == null)
+        {
+            return NotFound("prodcut not found");
+        }
+        productItem.QuantityInStock = newQuantity;
+
+        unit.Repository<Product>().Update(productItem);
+
+        if (await unit.Complete())
+        {
+            return Ok();
+        }
+        return BadRequest("Problem updating stock");
     }
 
     [InvalidateCache("api/products|")]

@@ -30,7 +30,6 @@ export class ShopService {
     }
     if (shopParams.search) {
       params = params.append('search', shopParams.search)
-
     }
 
     params = params.append('pageSize', shopParams.pageSize);
@@ -44,7 +43,7 @@ export class ShopService {
   }
 
 
-  getBrand() {
+  getBrands() {
     if (this.brands.length > 0) return;
     return this.http.get<string[]>(this.baseUrl + 'products/brands').subscribe({
       next: response => this.brands = response
