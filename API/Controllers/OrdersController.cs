@@ -107,17 +107,25 @@ namespace API.Controllers
 
         }
 
+        // [HttpGet]
+        // public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetOrdersForUser()
+        // {
+
+        //     var spec = new OrderSpecification(User.GetEmail());
+        //     var orders = await unit.Repository<Order>().ListAsync(spec);
+
+        //     var ordersToReturn = orders.Select(o => o.ToDto()).ToList();
+
+        //     return Ok(ordersToReturn);
+        // }
+
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetOrdersForUser()
+        public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetOrdersForUser([FromQuery] OrderSpecParams specParams)
         {
-            var spec = new OrderSpecification(User.GetEmail());
-
-            var orders = await unit.Repository<Order>().ListAsync(spec);
-
-            var ordersToReturn = orders.Select(o => o.ToDto()).ToList();
-
-            return Ok(ordersToReturn);
+            var spec = new OrderSpecification(specParams, User.GetEmail());
+            return await CreatePagedResult(unit.Repository<Order>(), spec, specParams.PageIndex, specParams.PageSize, o => o.ToDto());
         }
+
 
         [HttpGet("{id:int}")]
         public async Task<ActionResult<OrderDto>> GetOrderById(int id)
@@ -129,6 +137,29 @@ namespace API.Controllers
             if (order == null) return NotFound();
 
             return order.ToDto();
+        }
+
+
+        [HttpGet("cancel-order/{id:int}")]
+        public async Task<ActionResult<OrderDto>> CancelOrder(int id)
+        {
+            var spec = new OrderSpecification(User.GetEmail(), id);
+
+            var order = await unit.Repository<Order>().GetEntityWithSpec(spec);
+
+            if (order == null) return BadRequest("No order found.");
+
+            if (order.Status != OrderStatus.PaymentReceived)
+                return BadRequest("Payment not received for this order");
+
+            order.Status = OrderStatus.Cancelled;
+            unit.Repository<Order>().Update(order);
+
+            if (await unit.Complete())
+            {
+                return order.ToDto();
+            }
+            return BadRequest("Problem in return order");
         }
 
     }

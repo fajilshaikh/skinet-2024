@@ -37,7 +37,7 @@ export class AdminOrdersComponent implements OnInit {
   orderParams = new OrderParams();
   totalItems = 0;
 
-  statusOptions = ['All', 'PaymentReceived', 'PaymentMismatch', 'Refunded', 'Pending'];
+  statusOptions = ['All', 'PaymentReceived', 'PaymentMismatch', 'Refunded', 'Pending','Cancelled'];
 
   columns = [
     { field: 'id', header: 'No.' },
